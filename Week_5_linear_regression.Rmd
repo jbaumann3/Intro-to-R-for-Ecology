@@ -1,0 +1,303 @@
+---
+title: "Week 5 Linear Models"
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: kable 
+    #code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+# **Additional Tutorials and Resources for basic statistics in R** 
+
+[Linear model theory and assumptions](http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials/)
+
+[Linear Models (an intro)](https://ourcodingclub.github.io/tutorials/modelling/)
+
+[For the bold: Mixed effects models](https://ourcodingclub.github.io/tutorials/mixed-models/)
+
+# **LEARNING OBJECTIVES**
+1.) Learn the theory behind linear regression/ models</br>
+2.) Understand basic linear regression </br>
+3.) Understand the limitations of linear regression </br>
+4.) Apply linear regression to simple and complex hypotheses! </br>
+
+
+# **Step 1: Load the packages we need**
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vegan)
+library(ggsci) 
+library(patchwork) 
+library(performance) #check model assumptions
+
+```
+
+# **Step 2: Linear Regression in R**{.tabset}
+
+## Intro to Linear Regression
+There are 3 main types of data distribution. Each type of distribution requires different statistical procedures. 
+
+We have already talked about **Normal Distributions** (aka: bell curves or Gaussian). We can use ANOVA, t-test, and simple linear regression on this type of data. 
+We have also talked about how we might be able to use ANOVA approaches on non-normal distributions (with some caveats). 
+
+Below are the three main types of data distributions. </br>
+
+![distributions - ourcodingclub](images/data_distributions.PNG) </br>
+
+Note: it is possible for a Poisson distribution to look like a normal distribution. The "Examples" section of the graphic can be very helpful in knowing which type of analysis to choose! 
+
+Here, the graphic shows us that for continous data (usually approximately normal) we can use ANOVA, lm (linear regression), or mixed effects models (we MIGHT learn this later if there is time).
+
+For count data, including population counts and abundance counts, we usually have a poisson distribution. If that is the case we want to use glm or Generalized Linear Models. Again, the intricacies of these can be really complicated. As such, we **WILL NOT** get to glm and linear mixed effects models as a class this semester. I will be teaching these approaches in my research methods course next term (ecology capstone) and am happy to help you explore them this term if you are interested. For now, I reocgnize that we may not be able to choose "the best" statistical models for our data, but we can still learn how to use some models test assumptions to understand our limitations. 
+
+For surival data or binomial data like "presence vs absence" we often have a binomial distribution. Here we also want to use glm. 
+
+**Importantly** Model selection and model structure should be driven by your hypothesis. Fitting the "best" model doesn't always allow us to address our hypothesis so we will need to learn how to make judgement calls that allow us to find the best model that still addresses our question!
+
+
+
+
+## Linear regression theory
+
+A linear regression essentially compare the correlation of one variable with another. The closer the relationship is to 1:1 (a diagonal line at 45 degrees from the x and y axis) the more correlated the two variables are. Does correlation imply causation? NO, it does not. But this type of analysis driven by hypotheses can help us seek causation/ mechanisms and statistically assess relationships. 
+
+Linear regressions are not very differnt from ANOVA. They gave 4 assumptions: 
+
+1.) Linearity of the data: We assume the relationship between predictor (x) and outcome/dependent variable (y) is approx. linear
+
+2.) Normaliy of residuals: The residual errorr are assumed to be normally distributed
+
+3.) Homogeneity of residual variance (homoscedasticity): We assume residual variance is approx. constant
+
+4.) Independence of residual error terms
+
+**WE NEED TO CHECK THE FOLLOWING WHEN USING LINEAR REGRESSION**
+
+1.) Non-linearity 
+2.) Homescedasticity
+3.) Presence of influenctial values (outliers in the outcome(y) variable and extreme values in the predictor (x) variable).
+
+We can do ALL of this very quickly and easily using our old friend the "performance" package :)
+We simply need to use:
+
+check_model()
+
+(YAY, finally something easy :) )
+
+Ok, let's apply this theory and test out some basic lm
+
+## Simple linear regression
+
+In R, we can do a simple linear regression (or linear model) with the function lm() from base R. 
+
+Let's run through an example using iris and test the assumptions. You'll note that this is VERY similar to last week's assumption checking w/ ANOVA.
+
+```{r}
+head(iris)
+```
+
+### FIRST, we need to generate a hypothesis. Let's hypothesize that sepal length will scale positively with sepal width (longer sepals will also be wider). Now, we build out linear regression. In this case, Sepal.Length is our predictor var so it is our x variable. Sepal.Width is our outcome/dependent variable so it is our y variable. In lm() we use this notation lm(y~x) or Y in terms of X
+
+```{r}
+irislm<- lm(Sepal.Width ~ Sepal.Length, data=iris)
+
+summary(irislm)
+```
+
+### Interpreting your linear regression (R^2 and p-value)
+
+What does all that output mean? Here is an annotated example to help us learn... 
+![lm_output - ourcodingclub](images/lm_out.png)
+
+At the top of the output we see a reminder or our model structure. This will become more useful when we do more complex models. 
+
+In the middle we see a table of coefficients. This should look kind of like the output from ANOVA. Estimate tells us the mean effect size of each of our variables. This is not overly useful for us this time, so let's talk about this table in the next example. Notably, since x is continous and not categorical, (Intercept) is the values of x when y = 0. 
+
+Further down, we see the values we really care about for a SIMPLE linear model (R-squared and p-value). 
+The R-squared tells us how much of the variance is explained by the predictor (Sepal.Length). In other words, this tells us how close to a 1:1 line our model is, where R-squared nearer to 1 is best and closer to 0 is worse (less correlation). We want to look at adjusted R-squared, which we see is VERY low (0.007). We can visualize this with a graph... 
+
+```{r}
+ggplot(data=iris, aes(x=Sepal.Length, y=Sepal.Width))+
+  geom_point()
+```
+
+As we can see, there is NOT a clear linear relationship here. 
+Our R-squared value tells us the same thing. 
+The p-value is also not <0.05, indicating that there is NOT a significant linear relationship between sepal length and width. 
+As such, we can REJECT our hypothesis that longer sepals will be wider. 
+
+To visualize this, we can actually make an lm on our ggplot :)
+
+```{r}
+ggplot(data=iris, aes(x=Sepal.Length, y=Sepal.Width))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  theme_bw()
+```
+
+
+
+### What about those pesky assumptions?
+
+We can just use check_model in the "performance" package to quickly look at them...
+
+```{r}
+check_model(irislm)
+```
+
+Here we see that we have nearly normal residuals, a nearly normal distribution, SOME concerns about homoscedasticity (but overall, it seems mostly fine), and reasonable homogeneity of variance. 
+The last plot (Cook's Distance) shows us influential observations. Unless Cook's distance is >1 (x-axis) we don't need to worry. So here, we are good! 
+In short, our model was acceptable so we can trust what we saw!
+
+
+## Linear models with categorical variables!
+
+Let's make this a little more interesting... 
+
+We can look at mtcars this time... 
+```{r}
+head(mtcars)
+```
+
+
+Now, I want to hypothesize that there will be no effect of cylinder on horsepower (this is called a "null hypothesis"). We've seen similar hypothesis before in our ANOVA. 
+
+First, let's make cylinder a factor and plot a boxplot so we can see whether there may be a trend here... 
+
+```{r}
+mtcars$cyl1=as.factor(mtcars$cyl)
+
+ggplot(mtcars, aes(x=cyl1, y=hp))+
+         geom_boxplot()+
+         theme_bw()
+
+```
+
+
+I think it is safe to say we see what we might suspect to be a linear(ish) relationship between cyl and hp, where hp increases as cyl increases. What do you think?
+
+Now, let's do some stats on this. 
+
+```{r}
+lmhp<-lm(hp~cyl1, data = mtcars)
+summary(lmhp)
+```
+
+This time we used a categorical x variable, which makes things a little more interesting. In the coefficients table this time we see cyl = 6 and cyl =8 represented as well as "intercept." R takes the catergorical variables and places them in alpha numeric order in these tables. So "intercept" is actually cyl=4. The "estimate" tells us the effect size of each category relative to "intercept." SO, the mean of cyl=4 should be 82.64 (check the boxplot above to confirm). The mean of cyl=6 is not 39.65, but is actually 39.65 higher than mean of cyl=4 (82.64 + 39.65 = 132.29, which checks out). The p-values associated with each of the coefficients test the null hypothesis that each coefficient has no effect. A p <0.05 indicates that the coefficient is likely to be meaningful in the model (changes in the predictor's value are related to changes in the reponse value).
+
+Further down, we see an R-squared of nearly 0.70, which is very good evidence of a linear relationship (70% of the variance in y can be explained by x!). The p-value is very nearly 0.00, which indicates a significant linear correlation. 
+
+### Let's check assumptions!
+```{r}
+check_model(lmhp)
+```
+
+
+Here we see some concern about Homoscedasticity and homogeneity of variance. We can probably still assume our model is reliable, but we may want to be careful. We learned ways to numerically assess this last week, but again, with high enough sample size, this won't be an issue. Here, I would suggest that n is too small, so if this were a real statistical test we would have limitations to discuss. 
+
+
+Remember our hypothesis (null) was: "There will be no effect of cylinder on horsepower." We are able to reject this null hypothesis and suggest that indeed horsepower increases as cylinder increases. We might also add caveats that homoscedasticity was not confirmed due to low sample size, but the result seems clear enough that this likley doesn't matter. 
+
+## ONE MORE TEST of lm --> more complexity :)
+
+let's go back to iris 
+```{r}
+head(iris)
+```
+
+While looking at these data I might think that species impacts the relationsip between petal length and petal width. I might generate the following null hypothesis: 
+"Species has no effect on the relationship between petal length and petal width"
+
+Let's visualize this...
+
+```{r}
+ggplot(data=iris, aes(x=Petal.Width, y=Petal.Length, group=Species, color=Species))+
+  geom_point()+
+  facet_wrap(~Species, scales='free')+ #scales='free' allows the x and y ranges to vary by facet. This lets us have a better look at the comparison between petal width and length for each species
+  theme_bw()+
+  scale_color_aaas()
+```
+
+What we see here is unclear. Let's try to put an lm() layer on this and then look at some stats. 
+
+```{r}
+ggplot(data=iris, aes(x=Petal.Width, y=Petal.Length, color=Species))+
+  geom_point()+
+  facet_wrap(~Species, scales='free')+
+  geom_smooth(method=lm)+
+  theme_bw()+
+  scale_color_aaas()
+
+ggplot(data=iris, aes(x=Petal.Width, y=Petal.Length, color=Species))+
+  geom_point()+
+  #facet_wrap(~Species, scales='free')+
+  geom_smooth(method=lm)+
+  theme_bw()+
+  scale_color_aaas()
+```
+
+This visualization shows us that there are probably positive linear correlation between petal width and length but that the exact correlation varies by species. 
+
+Let's test out an interactive lm (using '+' (additive) will give us insights into how intercepts change, using interactive will also give us insights into how slopes change!) 
+
+```{r}
+specieslm<-lm(Petal.Length ~ Petal.Width * Species, data=iris)
+summary(specieslm)
+```
+
+Here, we see a more complex coefficients table. 
+The "intercept" in this case is the value of y (petal length) when x (petal width) = 0 and species = setosa. This is not necessarily the most useful thing for us to look at. That said, we see significant p-values for all variables, indicating that species does impact our linear models. 
+Petal.Width : 'species name' shows us differences in slopes between the species. Here we see that slope of verisolor differs from slope of setosa, but slope of virginica does not. 
+
+The R2 of our overall model is 0.95!, and p is ~ 0.0, so we have a clearly significant relationship here. 
+
+In summary, what we see is that there is a strong (0.95) positive (from the graph) correlation between petal length (y) and petal width (x) and that species of iris has a significant effect on that correlation (slope of the lines can differ by species). Our model shows us that each species still shows a strongly positive linear correaltion but that there are signficant differences between species. 
+
+
+Finally, let's test assumptions
+
+```{r}
+check_model(specieslm)
+```
+
+Right away, the first panel here shows us that we have HIGH multicollinearity, which is something we have not talked about yet. This essentially means that the predictors we used are highly correlated. This usually indicates that the variables are NOT independent of one another. IF we get into more complex modelling we can worry about this, but a way to eliminatae this would be to pull the effect of species out of our model. However, doing this, while it might make the "best" statistical model, will no longer allow us to address our hypothesis, so we need to make a judgement call here. This time, I elect to keep everything in the model. 
+
+Luckily, we see nice data for normality of residuals, so that's great. 
+Homoscedasticity actually looks decent for once, and there are no clear influential observations. In short, we really did ok here. We can assume this model is reliable. 
+
+Now, let's go back to our null hypothesis: "Species has no effect on the relationship between petal length and petal width"
+
+We can reject this null hypothesis as we had a very low p-value on our model. We can instead say that there is a significant positive linear correlation between petal length and petal width that varies in slope based on species. To take this even further, we can say that the slopes of setosa and virginica do not differ but the slopes of setosa and versicolor do! By looking at our plot, we can see that the correlation is stronger in versicolor than it is in the other two species!
+
+
+# **Step 3: Assignment for Week 5**
+
+Please build an RMarkdown document with your code and output and turn it in for a grade. 
+
+1.) Using ANY dataset you like (other than mtcars and iris), generate a null hypothesis for a relationship between 2 variables. </br>
+  a.) Assess this hypothesis with a linear regression (lm)</br>
+  b.) Show me a plot of the data (boxplot, scatterplot, etc)</br>
+  c.) Show me a plot of the data with an lm line added</br>
+  d.) Describe the results of your lm test (significant, r-squared, etc)  </br>
+  e.) Test for assumptions. Indicate where there may be issues or limitations.</br>
+  f.) Finally, accept or reject your null hypothesis </br>
+  
+2.) Again, using any dataset you like (other than mtcars and iris) generate a null hypothesis for a relationship between 2 variables AND include an interactive term (caterogical, like I did for species in iris in the last example above). </br>
+  a.) Assess this hypothesis with a linear regression (lm)</br>
+  b.) Show me a plot of the data (boxplot, scatterplot, etc)</br>
+  c.) Show me a plot of the data with an lm line added</br>
+  d.) Describe the results of your lm test (significant, r-squared, etc)  </br>
+  e.) Test for assumptions. Indicate where there may be issues or limitations.</br>
+  f.) Finally, accept or reject your null hypothesis </br>
+
+
+
+
+
+

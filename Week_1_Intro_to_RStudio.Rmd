@@ -1,0 +1,244 @@
+---
+title: 'Week 1: An intro to R and R Studio'
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: kable
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+
+# Additional Tutorials and Resources
+[basic intro to R tutorial](https://njsilbiger.github.io/GettingStarted/)
+
+[A second intro to RStudio](https://ourcodingclub.github.io/tutorials/intro-to-r/)
+
+[A really thorough video intro to R](https://rstudio.com/resources/webinars/a-gentle-introduction-to-tidy-statistics-in-r/)
+
+[more R tutorials](https://njsilbiger.github.io/)
+
+[A very user friendly resource](http://www.cookbook-r.com/)
+
+[Want to TRY some stuff on your own? Use the RStudio.cloud primers](https://rstudio.cloud/learn/primers)
+
+The best way to learn is to GOOGLE IT and try stuff </br>
+
+
+
+# **LEARNING OBJECTIVES**
+
+IN THIS TUTORIAL YOU WILL LEARN: </br>
+1.) How to navigate RStudio </br>
+2.) How to install and load packages </br>
+3.) How to view data  </br>
+4.) How to read and write data files </br>
+5.) How to use RMarkdown to make a document (you will use this to turn in homework)
+
+# **STEP 0: Set Working directory**
+The working directory is just the folder your data are stored in. This is where all the files you generate will be saved. It is very easy to change the working directory
+For this example, let's just choose the desktop. </br>
+navigate to the "Files" tab in the bottom right quadrant of R Studio. Click on the '...', navigate to 'desktop' and select ok. </br>
+Our files tab is now looking at all the files on your desktop. Select "More" cog in the bar and then select "Set as working directoy" </br>
+It is easy to forget where you are or be in the wrong folder, but it is also easy to change the working directory.  </br>
+
+To get a full path of the directory you are currently in you can SEE it on the bottom right quadrant. Or you can use:
+```{r setup, results='hide', message=FALSE}
+
+getwd()
+
+```
+
+# **STEP 1: INSTALL and then LOAD packages we need**
+
+NOTE: I like to put all of the packages at the top of my code so I can find them easily. </br>
+
+Install Packages</br>
+to install a package we need to navigate to the "packages" tab in our RStudio session (look to at the tab in the bottom right quadrant of the screen and click "packages")</br>
+
+Navigate to 'Packages' --> 'Install'. Next, type the name of each package you want to install (you only need to install ONCE per package unless you update R or change devices)</br>
+
+Note that this instance of virtual RStudio is not saving anything on your computer. If you decide to download and install R and RStudio for use on your own computer (IT IS FREE!!!!), you'll need to install all of these packages there. </br>
+
+Final note: INSTALLING PACKAGES DOESN'T WORK with Rstudio.bowdoin.edu. Only the system admins can install packages (we can load them, but we cannot install them). If you have R or Rstudio on your computer you can install packages that you have in your personal library to use w/ your rstudio.bowdoin.edu account. Please talk to Dr. Baumann if you are thinking about trying this. 
+
+We want to install the following packages: tidyverse (includes many useful packages), vegan --> This is it for now. I will explain this in class </br>
+
+### load packages
+```{r}
+library(tidyverse) #for data manipulation
+library(vegan) #contains some data we want
+library(rmarkdown) #this is how you'll build your homework assignments!
+
+```
+
+# **STEP 2: View data, read/write data into / out of R** {.tabset}
+
+R has integrated data sets that we can use to play around with code and learn. </br>
+
+examples: mtcars (a dataframe all about cars, this is available in R without loading a package), and iris (in the 'vegan' package, great for testing out ecology related functions and code)</br></br>
+
+## R has some test datasets built into it. Let's load one and look at it!</br>
+
+```{r}
+mtcars 
+```
+
+## Now let's look at the data frame (df) using head() and tail()
+#### These tell us the column names, and let us see the top or bottom 6 rows of data. 
+```{r}
+head(mtcars) 
+
+tail(mtcars) #tail shows the header and the last 6 rows 
+```
+
+## If we want to see the attirbutes of each column we can use the str() function
+```{r}
+str(mtcars) #str shows attirbutes of each column
+```
+### str() is very important because it allows you to see the type of data in each column. Types include: integer, numeric, factor, date, and more. If the data in a column are factors instead of numbers you may have an issue in your data (your spreadsheet)</br>
+
+###Importantly, you can change the type of the column. Here is an example
+```{r}
+mtcars$mpg=as.factor(mtcars$mpg) # Makes mpg a factor instead of a number
+str(mtcars)
+
+mtcars$mpg=as.numeric(mtcars$mpg) #Changes mpg back to a number
+str(mtcars)
+
+```
+
+
+## To see summary statistics on each column (mean, median, min, max, range), we can use summary()
+```{r}
+summary(mtcars) #summarizes each column
+```
+
+## To see the number of rows and columns we can use nrow() and ncol() 
+```{r}
+nrow(mtcars) #gives number of rows
+ncol(mtcars) #gives number of columns
+```
+
+### Rename mtcars and view in Environment tab in Rstudio
+```{r}
+a<-mtcars
+a
+head(a)
+```
+
+## write the data to a .csv for import to excel (if desired)
+```{r}
+write.csv(a, file='mtcars.csv')
+```
+
+
+##read the file back in (learn how to import data into R)
+NOTE: if you have a .xls file make sure you convert to .csv. Ensure the file is clean and orderly (rows x columns). Only 1 excel tab can be in each .csv, so plan accordingly
+
+```{r}
+b<-read.csv('mtcars.csv')
+head(b)
+```
+
+#### You can also read in data from a weblink
+```{r}
+seps <- read.csv("http://www.mm-c.me/mdsi/hospitals93to98.csv")
+head(seps)
+```
+
+##### Another example <- using a tidytuesday dataset (we will discuss TidyTuesday later!)
+
+```{r}
+penguins <- read.csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-28/penguins.csv')
+head(penguins)
+```
+
+# **Step 3: How to use RMarkdown**
+
+## RMarkdown is a package in R that allows you to make a nice neat, .html, pdf, or word output of your code. It is easy to use and will make it much easier for you to turn in your homework assignments. 
+
+## To make an Rmarkdown file (.rmd), simply load RMarkdown
+```{r}
+library(rmarkdown)
+```
+
+## Next, click 'file' --> 'new file', 'R Markdown' 
+
+## A window will popup asking you to give the new file a title and author. Write the Week of the assignment as the title and your name as the author. Click "ok"
+
+## A new script will popup in R. You should replace the top few lines with this:
+(NOTE: your title and not change, keep those the same) 
+
+title: 'Week 2: Data Manipulation in R'
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    df_print: kable
+    toc: yes
+    toc_float: yes
+editor_options:
+  chunk_output_type: console
+
+## Delete everything below the --- that you see after this title section that you have just pasted in. 
+
+## Ok, you are ready to make a .rmd file! 
+
+We already talked about how using the hashtag comments out a line of code. 
+In markdown files, you can actually just type normally anywhere on the file and it will stay as text. 
+However, if you use a single # before a line (with a space between # and text) it will make that line a section header. 
+
+For example... Try # 1.) (see below for an example) 
+
+# 1.) 
+
+## to add bold you just do  2 starts to either side of the thing you want to bold <-**1.)**
+
+You can use # as a main header, ## as sub headers, ### as additional sub headers, etc. 
+If you want to get fancier than that, let's chat in office hours :)
+
+# Importantly, to put code into your markdown document you need to press ctrl +alt + i (use command instead of ctrl on a mac)
+This build a code chunk (a grey area will appear). You can place code inside the chunks! You'll see a little green arrow in the top right of each chunk. This is how you "run" the entire chunk. You can also run line by line as normal with ctrl+enter (pc) OR command+r (mac)
+
+## An example of a code chunk (don't forget to load your packages at the top of every script!)
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+# AFTER you build out your document, you can hit "knit" (as HTML is my preference) to make a nice looking document, like the one you are reading. 
+
+Use this for your homework assignments! If you are struggling please come to office hours or make an appointment with me to chat about this!
+ 
+
+
+# **Step 4: Assignment for Week 1**
+
+## USE an R markdown file to complete this assignment. 
+### Make an rmd document (file -> New File -> R Markdown) </br>
+## a.) Name the file "lastname_week1"</br>
+## b.) copy and paste the assigned tasks into the script</br>
+## c.) write the code necessary to complete each task(the output of each code chunk will be added to your .pdf, html, or .doc file automatically when you hit "knit")
+
+## 1: Load the 'iris' dataset from the 'vegan' package, look at it, and write it to a file. 
+
+## 2: [Load a dataset from the tidytuesday page (navigate the github page, choose a dataset, locate the url of the .csv, and load it into R)](https://github.com/rfordatascience/tidytuesday)
+
+## 3.) Turn in your code on Blackboard</br>
+
+## *Extra note: To "comment out" a large section of code (anything > 1 line, you select all of the lines you want to comment and then hit ctrl+shift+c)
+
+
+```
+
+
+

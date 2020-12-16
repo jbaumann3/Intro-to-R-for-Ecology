@@ -1,0 +1,463 @@
+---
+title: "Week 3: ggplot"
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: kable 
+    #code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+# **Additional Tutorials and Resources for graphs in ggplot** 
+
+[Basics of ggplot](http://www.cookbook-r.com/graphs)
+
+[Colors with ggsci](https://cran.r-project.org/web/packages/ggsci/vignettes/ggsci.html)
+
+[TidyTuesday](https://github.com/rfordatascience/tidytuesday): Data for playing w/ ggplot features. Follow #TidyTuesday on twitter for inspo
+
+[Many plots, 1 page w/ Patchwork](https://github.com/thomasp85/patchwork)
+
+[TRY some ggplot functions on your own](https://rstudio.cloud/learn/primers/3)
+
+The best way to learn is to GOOGLE IT and try stuff </br>
+
+# **LEARNING OBJECTIVES**
+1.) Apply basic plotting functions to new data</br>
+2.) Add color, themes, and other aesthetics </br>
+3.) Learn how to panel plots w/ patchwork </br>
+4.) IF TIME PERMITS: use dplyr data manipulation (%>%) & ggplot together! --> aka, try a tidytuesday challenge
+
+
+# **Step 1: Load any packages we may need**
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vegan)
+library(ggsci) #this package allows us to EASILY add good color schemes to plot
+library(patchwork) #this package is used to panel many plots onto 1 page 
+```
+
+# **Step 2: a review of basic ggplot + some new details!** {.tabset}
+
+#### ggplot2 is a data visualization package within R. It is separate from the base R plot() function and (with few exceptions) is the best option for making graphs and data visualizations in R. It is pretty easy to learn, has great tutorials and documentation (cookbook-r.com/graphs is incredibly useful), and tends to result in better looking graphs. 
+
+## Anatomy of a (simple) ggplot
+#### Let's work with mtcars again. We will make a scatterplot, the simplest of options in ggplot. 
+
+
+### Scatterplot
+#### Every ggplot starts with a call of the main function "ggplot()". If we want, we can define the data source and aestethics (aes) within this function. </br> 
+#### Next, we want to call the geometry function (what shapes do we want in our plot?). Here, we choose 'geom_point' to make points. Note that we can also define the data source and aes inside this function INSTEAD of the 'ggplot()' function. WHY might this be useful?
+
+```{r}
+mtcars$cyl=as.factor(mtcars$cyl)
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl))+
+  geom_point()
+
+ggplot()+
+  geom_point(data=mtcars, aes(x=cyl, y=mpg, color=cyl))
+```
+</br> 
+### We just made 2 graphs that look exactly the same using slightly different code. Hopefully you can see that ggplot() is very flexible. 
+
+## Changing Shape, Size, and Color of points
+
+### Shape of Points
+#### ggplot gives us options to change point shape using the aesethic option 'shape' </br>
+#### WE can either change shape based on a characterstic of the data ('cyl', for example), make all the shapes the same, or manually control shape
+#### Below is a table of shape options
+
+![ggplot point shape options source:http://sape.inf.usi.ch/quick-reference/ggplot2/shape](images/ggplot_shapes.png)
+</br>
+### Conditional Shape Change
+
+```{r}
+
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl, shape=cyl))+ #note that we added 'shape=' to our aes. 
+  geom_point()
+```
+
+### Change all shapes to triangles (shape number 17 in the image above)
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl))+
+  geom_point(shape=17) #Here 'shape=' is inside the settings for geom_point. Note that it is outside the aes() function, as that applied aesethics conditionally)
+
+#example 2, same w/ different syntax
+ggplot()+
+  geom_point(data=mtcars, aes(x=cyl, y=mpg, color=cyl), shape=17)
+```
+
+### Manual shape changes 
+```{r}
+ggplot()+
+  geom_point(data=mtcars, aes(x=cyl, y=mpg, color=cyl, shape=cyl))+
+  scale_shape_manual(values=c(2,3,4)) #scale_shape_manual allows us to choose shapes for each group (cyl in this case). c stands for concatenate, as we've seen before
+```
+
+## Changing Size of points
+
+### Conditional Shape Change
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl, size=cyl))+ #note that we added 'size=' to our aes. 
+  geom_point()
+#note the warning message that using size for a discrete variable is not best practice. 
+#Instead, let's use the size to five us an idea of hp (a 3rd variable)
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl, size=hp))+ #note that we added 'size=' to our aes. 
+  geom_point()
+```
+
+### Change size of all points (all points must be same size)
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl))+  
+  geom_point(size=5) #as w/ shape, point needs to be outside the aes() here. 
+```
+
+
+## Changing colors (the basics)
+
+### Conditional color change
+#### We are already doing this, with color= inside our aes() call
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl, shape=cyl))+ #NOTE: we can use color= or fill = or both depending on our needs
+  geom_point()
+```
+</br>
+### Manual color change
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl))+
+  scale_color_manual(values=c('red', 'black', 'blue')) #we can use scale_color_manual to change colors. The order is the same as the order in the legend! NOTE: we can also 'scale_fill_manual' 
+```
+
+### ggplot color options: 
+![ggplot color options](images/ggplot_colors.png)
+![ggplot color hexcodes](images/ggplot_hex_colors.png)
+</br>
+
+### another color option: Make your own color palette
+```{r}
+mypalette<-c('dodgerblue', 'forestgreen', 'coral','grey','vermillion')
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ #note that I changed point size to make it look nicer
+  scale_color_manual(values=mypalette) #You still use scale_color_manual but you can pick the colors beforehand. Note that I picked a palette of 5 colors but only had 3 categories, so only the first 3 are used here. 
+
+```
+
+### You can also brew your own color palette with the package "RColorBrewer." I am not going to give examples of this, but feel free to mess around w/ this (google it)
+
+### Finally, EASY and nice looking palettes with [ggsci](https://cran.r-project.org/web/packages/ggsci/vignettes/ggsci.html)
+</br>
+#### ggsci is a simple and neat package that allows us to use scientific journal color themes for our data (usually colorblind friendly and nice looking)
+
+#### we simply change our "scale_color_manual" to "scale_color_palname" where "palname" is one of many provided by ggsci
+#### for example, here is the Nature color palette and the AAAS color palette
+
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_npg()
+
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()
+
+```
+
+## Advanced aesthetic options and building nice looking plots!
+
+### [THEMES](https://ggplot2.tidyverse.org/reference/ggtheme.html)
+#### ggplot provides many themes to make your plots look nice. My personal preference is to remove the gray background and most of the lines. 
+
+#### Here are "the best" (in my opinion) themes available in ggplot. I would recommend NOT using other ggplot themes unless you have very specific needs. These are the simplest and best looking. 
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  theme_bw() #theme_bw removes the background color and adds a thick black border
+
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  theme_classic() #theme_classic removes the background color, all lines, and only keeps the X and Y axis (no border)
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  theme_minimal() #theme_minimal removes the border and grey background
+```
+
+#### You can also make your own theme. 'theme()' allows you to change nearly any aspect of a ggplot (axes labels, tick marks, title, legends, etc)
+
+#### For example, it can get complicated if you want it to... This is essentially what theme_minimal() does. But I can change the text size on the axes so that is nice :)
+```{r}
+  ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),    ###this is essentially every kind of option you can change. 
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        axis.text  = element_text(size=12),axis.title = element_text(size=14),
+        legend.title = element_text(size=14), legend.text = element_text(size= 12))
+```
+
+### Change axes labels, titles, and legends
+
+#### Making a title
+```{r}
+ ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()
+
+```
+
+#### Labelling the axes
+```{r}
+ ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')
+```
+
+#### Changing the label of the figure legend and legend elements
+
+#### 1 option is to to use scale_shape_discrete (or color, or fill), give the legend a name and rename each item in the legend
+
+```{r}
+ ggplot(data=mtcars, aes(x=cyl, y=mpg, shape=cyl))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  scale_shape_discrete(name = 'Cylinders',
+                      breaks=c('4','6','8'),
+                      labels=c('Four','Six','Eight'))
+```
+
+#### Another is just a simple labs() function
+```{r}
+ ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders") #note that I removed shape from the aes() so we didn't have 2 legends (because that is silly and looks bad)
+```
+
+### Change legend position
+```{r}
+ ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(legend.position = "top")
+
+ ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(legend.position = "bottom")
+
+```
+
+## Facets- a new way to look at data
+
+We can use facet_wrap or facet_grid to make multipanel plots!
+```{r}
+mtcars$cyl=as.factor(mtcars$cyl)
+mtcars$gear=as.factor(mtcars$gear)
+
+ ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  facet_wrap(~gear)+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  theme_bw()+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(legend.position = "bottom")
+```
+
+
+## Multiple figures on the same page (and making it look cool)
+
+#### Let's look at the data we have been using in this example in several ways and pick the best looking option (by panelling them all on 1 page)!
+
+```{r}
+opt1<- ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_point(aes(color=cyl), size=3)+ 
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),    ###this is essentially every kind of option you can change. 
+      panel.background = element_blank(), axis.line = element_line(colour = "black"),
+      axis.text  = element_text(size=12),axis.title = element_text(size=14),
+      legend.title = element_text(size=14), legend.text = element_text(size= 12))
+
+opt1
+
+
+opt2<- ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_violin(aes(fill=cyl))+ 
+  scale_fill_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),    ###this is essentially every kind of option you can change. 
+      panel.background = element_blank(), axis.line = element_line(colour = "black"),
+      axis.text  = element_text(size=12),axis.title = element_text(size=14),
+      legend.title = element_text(size=14), legend.text = element_text(size= 12))
+
+opt2
+
+opt3<- ggplot(data=mtcars, aes(x=cyl, y=mpg))+ 
+  geom_boxplot(aes(fill=cyl))+ 
+  scale_fill_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),    ###this is essentially every kind of option you can change. 
+      panel.background = element_blank(), axis.line = element_line(colour = "black"),
+      axis.text  = element_text(size=12),axis.title = element_text(size=14),
+      legend.title = element_text(size=14), legend.text = element_text(size= 12))
+
+opt3
+
+
+```
+
+#### Now what if we take averages and plot means instead? What looks best / is most useful?
+```{r}
+#first we will calculate average MPG by cylinder (this is from last week)
+mpgpercyl<-mtcars%>%
+  group_by(cyl)%>%
+  summarize(mean=mean(mpg),error=sd(mpg))
+
+mpgpercyl
+
+
+opt4<- ggplot(data=mpgpercyl, aes(x=cyl, y=mean))+ 
+  geom_jitter(data=mtcars, aes(x=cyl, y=mpg, color=cyl), alpha=0.5, width=0.15, height=0)+  #geom_jitter makes points randomly move around, we can control width and height, alpha = transparency
+  geom_point(aes(color=cyl), size=4)+
+  geom_errorbar(aes(x=cyl, ymax=mean+error, ymin=mean-error), width=0.2)+
+  scale_fill_aaas()+
+  scale_color_aaas()+
+  ggtitle("Cars with fewer cylinders have higher mpg")+
+  ylab('Miles per Gallon')+ 
+  xlab('Cylinders')+
+  labs(color = "Cylinders")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),    ###this is essentially every kind of option you can change. 
+      panel.background = element_blank(), axis.line = element_line(colour = "black"),
+      axis.text  = element_text(size=12),axis.title = element_text(size=14),
+      legend.title = element_text(size=14), legend.text = element_text(size= 12))
+
+opt4
+
+
+```
+
+### We have our 4 options, how can we panel them? Let's use the 'patchwork' package! [patchwork](https://patchwork.data-imaginist.com/articles/patchwork.html) 
+
+```{r}
+# A sample patchwork, this actually works for our purposes...
+opt1+opt2+opt3+opt4
+
+#Other patchwork options
+opt1+ (opt2/opt3/opt4)
+
+#We can choose any plot to put on the left if we want :)
+opt4 + (opt1/opt2/opt3)
+
+#some more fancy options
+opt4 + (opt1/opt2/opt3)+
+  plot_annotation(tag_levels='A') #adds annotation (can use letters or roman numerals)
+
+
+opt1+opt2+opt3+opt4+plot_layout(ncol=3) #puts plots in 3 columns (any space not used will be blank)
+
+opt1+opt2+opt3+opt4+plot_layout(nrow=3) #puts plots in 3 rows (any space not used will be blank)
+
+
+opt4 + (opt1/opt2/opt3)+
+  plot_annotation(tag_levels='A')+
+  plot_layout(guides='collect') #collects all of the legends (in this case, puts them on the right...)
+
+(opt4+plot_layout(guides='auto')) + (opt1/opt2/opt3+plot_layout(guides='collect'))+ 
+  plot_annotation(tag_levels='A')
+  
+opt1+opt2+opt3+opt4+
+  plot_layout(widths=c(2,1)) #change width of columns
+
+
+#make a custom layout!
+layout<- c(
+  patchwork::area(t=2, l=1, b=9, r=8),
+  patchwork::area(t = 1, l = 6, b = 2, r=8),
+  patchwork::area(t= 2, l=9, b=9, r=17),
+  patchwork::area(t = 1, l = 15, b = 2, r =17))
+
+opt1+opt2+opt3+opt4+
+  plot_layout(design=layout) #use our custom layout (this is a silly example, but you can see how it works)
+
+```
+</br>
+### Which plot is best? I like this one:
+```{r}
+opt4 + (opt1/opt2/opt3)+
+  plot_annotation(tag_levels='A')+
+  plot_layout(widths=c(2,1))
+```
+
+
+# **Step 3: Assignment for week 3**
+## NOTE: use data other than mtcars for this! Please read in another dataset (perhaps from the tidytuesday data :) )
+
+## 1.) Make a scatter plot, using conditional shape change
+
+## 2.) Change the size of your points so that they fit the scale of your plot (not too small or too large)
+
+## 3.) Remove the grey background from your figure and change the colors of your points (use ggsci if you want, but this is not required)
+
+## 4.) Plot a mean + error range
+
+## 5.) Build a bar chart or line graph instead of a scatterplot 
+
+## 6.) Try to make a patchwork plot that plots your scatterplot, average+error plot, and line/bar chart. Try to include a title that is informative for each plot and for the overall patchwork (see the patchwork website for help w/ this)
+
+
+
+```
+
+
+
+

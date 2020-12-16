@@ -1,0 +1,203 @@
+---
+title: 'Week 2: Data Manipulation in R'
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: kable
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+# Additional Tutorials and Resources
+[basic intro to R tutorial](https://njsilbiger.github.io/GettingStarted/)
+
+[A second intro to RStudio](https://ourcodingclub.github.io/tutorials/intro-to-r/)
+
+[A really thorough video intro to R](https://rstudio.com/resources/webinars/a-gentle-introduction-to-tidy-statistics-in-r/)
+
+[more R tutorials](https://njsilbiger.github.io/)
+
+[A very user friendly resource](http://www.cookbook-r.com/)
+
+[Want to TRY some stuff on your own? Use the RStudio.cloud primers](https://rstudio.cloud/learn/primers)
+
+The best way to learn is to GOOGLE IT and try stuff </br>
+
+# **LEARNING OBJECTIVES**
+1.) How to subset, filter, and trim data</br>
+2.) How to use the 'pipe' (%>%) in dplyr and Tidyverse </br>
+3.) A first glimpse at a plot</br>
+
+# **STEP 1: Load any packages we may need**
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vegan)
+```
+
+# **Step 2: Basics of dyplr data manipulation**{.tabset}
+
+## first, read in a data frame 
+#### mtcars and iris are already read in. But let's bring that penguin data back from tidytuesday because it is fun
+```{r}
+head(mtcars)
+head(iris)
+
+penguins <- read.csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-28/penguins.csv')
+head(penguins)
+
+```
+
+## Filtering to remove unwanted columns (in 2 ways)
+### 1. We can use the 'select' function within Tidyverse (and the dplyr package) to choose some columns to keep
+
+```{r}
+select(mtcars, mpg, cyl, hp)
+
+```
+
+#### if we give that new data frame a name we can call it whenever we want to use it
+```{r}
+shortcars<-select(mtcars, mpg, cyl, hp)
+head(shortcars)
+```
+
+## Using base R, we can also select columns we want to keep (or remove) 
+##### this is a little more confusing, but let's take a look anyway (as this is more common in other coding languages)
+
+```{r}
+shortcars2<-mtcars[,c(1,2,4)] #the brackets allow us to select rows and then columns
+shortcars2
+```
+#### inside the brackets, we select rows first, then columns. So here, we are not specifying any rows. To select column(s), we simple include the number of each column (1 is the left most column) that we want in a list. </br>
+#### NOTE: the 'c' stands for 'concatenate', which means to combine (essentially). The syntax here would read: "within mtcars, select all rows and columns 1,2, and 4). </br>
+
+## We can also select columns (or rows) to remove if we want. 
+#### note that we can indeed use a ':' to make a range (including the first and last columns or rows of interest)
+```{r}
+shortcars3<- mtcars[, -c(3,5:11)] #what is different here?
+shortcars3
+```
+</br></br></br>
+
+# **Step 3: Subsetting and filtering data**{.tabset}
+
+Sometimes we only want to look at data from a subset of the data frame </br>
+FOR EXAMPLE, what is we only want data from 4 cylinder cars?</br>
+
+## We can use filter to subset the data frame
+```{r}
+cars4cyl<-filter(mtcars, cyl == "4")
+head(cars4cyl)
+```
+
+#### how can we confirm that this works?
+```{r}
+cars4cyl #if the df is short enough, we can just look!
+str(cars4cyl) #str shows us the observations and variables in each column
+cars4cyl$cyl #shows us only the observations in the cyl column!
+```
+</br>
+
+## An alternative to filter() --> subset()
+### we can also use the subset() function to subset
+```{r}
+#subset mtcars to include only 4 cylinder cars
+cars4cyl2.0<-subset(mtcars, cyl=='4')
+cars4cyl2.0
+```
+</br>
+
+# **Step 4: The %>% syntax: how to combine actions for faster and more efficient data manipulation**{.tabset}
+
+## Example: Calculate the min, mean, max, and error for MPG in cars w/ 4 cylinders and > 100 hp
+
+```{r}
+mpgdf<-mtcars%>%
+  filter(cyl=='4' , hp >100) %>% #filters mtcars to only include cars w/ 4 cylinders and hp greater than 100
+  summarize(min = min(mpg), max = max(mpg), mean = mean(mpg), error=sd(mpg))
+
+head(mpgdf)
+```
+#### We can see how useful it might be to be able to use a pipe (%>%) to execute several functions at once. 
+
+## Example 2: Calculate mean and error of MPG for cars with 4, 6, and 8 cylinders (this is a more practical example)
+```{r}
+mpgpercyl<-mtcars%>%
+  group_by(cyl)%>%
+  summarize(mean=mean(mpg),error=sd(mpg))
+
+head(mpgpercyl)
+```
+
+# **Step 5: Learn to make a graph!**{.tabset}
+## let's use the data we just generated on mpg to make a plot! 
+### We will use the ggplot2() package that is embedded in Tidyverse. It is the best option for making really nice looking plots in R. 
+
+### [Here is a great tutorial for ggplot2](http://www.cookbook-r.com/graphs)
+
+## Scatterplot
+```{r}
+mpgpercyl$cyl=as.factor(mpgpercyl$cyl) #we made cylinder a factor (categorical variable) instead of a number so we could assign different colors to each catergory (of cylinder #)
+
+ggplot()+
+  geom_point(data=mpgpercyl, aes(x=cyl, y=mean, color=cyl))
+```
+
+## Barplot
+```{r}
+ggplot(data=mpgpercyl, aes(x=cyl, y=mean, fill=cyl))+
+  geom_bar(stat='identity')
+```
+</br>
+### As you can see by comparing the code of the barplot and scatterplot, ggplot is really flexible. The 'data=' and 'aes' statements can be moved around some. You will learn more about this next week. 
+
+### The size, color, and many other aestetic options can all be changed easily. We will learn more about this next week!
+
+## Scattplot w/ error bars
+```{r}
+ggplot(data=mpgpercyl, aes(x=cyl, y=mean, color=cyl))+
+  geom_point()+
+  geom_errorbar(aes(x=cyl, ymax=mean+error, ymin=mean-error)) #size, color, etc can all be changed. 
+```
+
+## Boxplot: another option that you can run on raw data to see trends without doing any calculations
+```{r}
+mtcars$cyl=as.factor(mtcars$cyl)
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, fill=cyl, group=cyl))+
+  geom_boxplot()
+```
+
+
+## Violin plot: Another option using raw data
+```{r}
+mtcars$cyl=as.factor(mtcars$cyl)
+
+ggplot(data=mtcars, aes(x=cyl, y=mpg, fill=cyl, group=cyl))+
+  geom_violin()+
+  geom_boxplot(fill='white',width=0.1)+
+  coord_flip()
+```
+
+
+### Feel free to play around with ggplot (using the cookbook for r website) but it is not part of your assignment this week!
+
+
+
+# **Step 6: Assignment for Week 2**
+
+To complete this assignment, make a new script called "lastname_week2"
+
+## 1.) select() columns from a data frame (either mtcars, iris, or something else you want to use). Use select() first and then try the bracket [] approach!
+
+## 2.) Filter iris to only include the species 'setosa' and confirm that your filter step worked. Next, do the same thing using the subset() function. 
+
+## 3.): calculate the mean, min, and max weight of cars in the dataframe based on the number of gears they have
+
+
+## 4.): produce similar data (to #3) for another dataset you have loaded (you can select anything from the tidytuesday data on github, any data you have already, or anything you find online!)

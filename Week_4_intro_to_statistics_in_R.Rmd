@@ -1,0 +1,411 @@
+---
+title: "Week 4: Intro to statistics"
+author: "Justin Baumann"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: kable 
+    #code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+# **Additional Tutorials and Resources for basic statistics in R**  
+
+[t-tests](https://statistics.berkeley.edu/computing/r-t-tests)
+
+[More advanced info on t-tests](http://www.sthda.com/english/wiki/unpaired-two-samples-t-test-in-r)
+
+[one-way ANOVA](http://www.sthda.com/english/wiki/one-way-anova-test-in-r)
+
+[Advanced ANOVA](https://www.datanovia.com/en/lessons/anova-in-r/)
+
+[Colors with ggsci](https://cran.r-project.org/web/packages/ggsci/vignettes/ggsci.html)
+
+The best way to learn is to GOOGLE IT and try stuff </br>
+
+# **LEARNING OBJECTIVES**
+1.) Learn the theory of t-test and ANOVA</br>
+2.) Understand limitations of t-test and ANOVA </br>
+3.) APPLY t-test and ANOVA to data and learn how to intepret </br>
+
+
+# **Step 1: Load the packages we need**
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vegan)
+library(ggsci) 
+library(patchwork) 
+library(performance) #check model assumptions
+library(rstatix) #test for outliers
+```
+
+# **Step 2: The T-test**{.tabset}
+
+## T-test theory
+
+The t-test (or students' t-test) is a basic statistical test used to assess whether or not the means of two groups are different from one another. In this test, the null hypothesis is that the two means are equal (or that there is no difference between the two means). 
+
+A t-test should only be used if the following assumptions are met:
+1.) the two distributions whose means we are comparing must be **normally distributed** 
+2.) The variances of the two groups must be **equal**
+
+### Assessing normality
+Method 1: the Shaprio-Wilk Test. If p < 0.05 then the distribution is signficantly different from normal.
+```{r}
+shapiro.test(mtcars$mpg) #this is normally distributed
+
+shapiro.test(mtcars$cyl) # this is not
+
+shapiro.test(mtcars$hp) #this is not normal (but very close to p=0.05)
+
+shapiro.test(mtcars$wt) #this is normal
+```
+</br>
+Method 2: Visualization
+
+```{r}
+ggplot(data=mtcars, aes(mpg))+
+  geom_histogram(binwidth = 3) #looks normal
+
+ggplot(data=mtcars, aes(cyl))+
+  geom_histogram(binwidth=1) #NOT normal
+
+ggplot(data=mtcars, aes(hp))+
+  geom_histogram(binwidth=35) #looks near normal, with some skew 
+
+ggplot(data=mtcars, aes(wt))+
+  geom_histogram(binwidth=0.5) #looks normal
+```
+
+### Can we ignore either of these 2 assumptions?
+
+We can if our sample sizes are large. If n is small, we should not ignore this assumption. 
+There are alternatives to dealing with normality that we can discuss in the ANOVA section (such as transforming the data)
+
+[For more info on that](https://thestatsgeek.com/2013/09/28/the-t-test-and-robustness-to-non-normality/)
+
+We can also ignore the equal variance requirement if we use the Welch t-test (default in R)
+
+
+## A basic T-test in R
+
+### Let's compare two columns in the mtcars data frame
+
+### Do the means of mpg and cyl differ?
+```{r}
+
+t.test(mtcars$mpg,mtcars$cyl, alternative='two.sided', var.equal=FALSE) #two.sided and var.equal= FALSE are default, so we don't have to list them. BUt, we can also change them (as I will show later)
+
+```
+
+The result of the above t.test shows that p<0.05, so these two means are different. Now, which one is lower? Through looking at the plots we obviosuly know it is cyl, but we can confirm that with a t.test if we want!
+
+### Is the mean of mpg > cyl?
+```{r}
+t.test(mtcars$mpg,mtcars$cyl, alternative='greater', var.equal=FALSE) #'greater' here technically asks if the diffrence in means is > zero (in which case, the variable listed first would have a mean higher than the variable listed second)
+
+
+t.test(mtcars$mpg,mtcars$cyl, alternative='less', var.equal=FALSE) #'less' here technically asks if the diffrence in means is < zero (in which case, the variable listed first would have a mean lower than the variable listed second)
+
+```
+
+### As you can see, we can use a t-test to tell us if there is a difference in means between the two groups we are looking at. Which is fine, but not always very useful. Our example here was totally frivolous. We don't need statistics to tell us that the mean of cylinder (which is between 4 and 8) and the mean of mpg (which ranges between <10 and >20) are obviously different. We would already expect that. 
+
+### SO, when is a t-test actually useful and when isn't it? Most of the time, this is not the most useful test. That is why we need ANOVA!
+
+
+# **Step 3: Analysis of Variance (ANOVA)**{.tabset}
+
+## ANOVA theory
+
+Analysis of variance (ANOVA) is a common statistical test used to compare the means of multiple groups. A t-test can only compare the means of 2 groups. ANOVA can compare many groups, making it much more likely to be useful.  
+
+Let's take a look at the theory behind ANOVA.
+
+![ANOVA theory - datanovia.com](images/one-way-anova-basics.png)
+
+
+This figure has 3 groups (blue, yellow, and gray) with means represented by dotted vertical lines. The solid lines are the distrubitions of each group (essentially, the variation with-in a group). 
+This variation within a group is called **residual variance** (Panel B). 
+The goal ANOVA is to compare means to see if they differ. The way ANOVA works is that it compares the variance between groups (Panel A) with the residual variance (Panel B). If between group variance is great enough when compared to residual variance then you can conclude that there is some kind of differnece between group means (at least 1 group mean differs from the others).
+
+In summary: An ANOVA is a comparison of 2 variance estimates (between group vs within group), that is why we call is analysis of variance even though it really assess differences between means. 
+
+ANOVA relies on something called the **F-statistic** which we can calculate as: variance between groups / variance within groups (residual variance)
+
+## **Assumption of ANOVA** 
+ANOVA operates best under the following assumptions: 
+
+1.) Independence of observations (each subject belongs to only 1 group, every observation is independent of other observations. There is no relationship or correlation between the observations in each group.)
+
+2.) No signficiant outlier exist 
+
+3.) Normality: The data are approximately normally distributed
+
+4.) Homogeneity of variances (the variance of the outcome variable should be similar in all groups)
+
+NOTE on assumption violations: 
+
+Independence is the single most imporatnt assumption. It should not be violated. If it is, best practice is to run a differnt (non-parametric) statistical test. 
+
+The outlier assumption is easily handled, as outliers can be removed from data. That said, modern best practices in statistics encourage the user to remove fewer outliers (and only remove extreme outliers). This assumption is often ignored at little cost. 
+
+As with t-tests, if sample sizes are large enough (which they almost always are), the normality assumption can be violated. With small sample sizes you can transform your data to make it normal (w/ log, natural log, or square root).
+
+Homogeneity of variances (Homoscedasticity). This one is complicated. In short,as long as sample sizes (n) are the same (or similar) for your groups, even with low sample sizes you can usually violate this assumption and be fine. Most people DO NOT even test for this assumption (or any of the others), but... it seems possible that any p-values derived from any ANOVA in which assumptions are violated are not that trustworthy. 
+
+There is a lot of argument about how and what the best practices for ANOVA are. Truthfully, I do not fully understand all of this, but I will show you how to do a few tests on your data before doing an ANOVA, just to be careful. I will argue for better statistical practices (that move beyond ANOVA and p-values in general) next week (if we have time). 
+
+
+**Testing assumptions**
+1.) Independnce. We need to consider our experimental design to test this one. 
+
+2.) Outliers
+To look for outliers, we can use a boxplot. Or the identify_outliers() function in the rstatix package.
+Here, we see outliers in the 8 cylinder group, but they are not extreme and are likely only outliers due to low n. So we will keep them (this is a judgement call)
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, group=cyl))+
+  geom_boxplot() #dots are outliers, we see 2 in the 8 cyl group. But do they really look like outliers???
+
+#make cyl a factor! This matters :)
+mtcars$cyl=as.factor(mtcars$cyl)
+
+mtcars %>% 
+  group_by(cyl) %>%
+  identify_outliers(mpg) #Here we can see that the 2 points we saw in the boxplot are actually 3 (2 of the outliers have the same mpg). They test as outliers but NOT extreme outliers. So we will not remove them. 
+```
+
+3. & 4.) Normality and Homoscedasticity
+
+We can test normality and homoscedasticity of the entire anova using check_model() in the Performance package.
+
+```{r}
+model1<-aov(mpg~cyl, data=mtcars) #this is our ANOVA model! We will learn more about this on the next tab
+check_model(model1)
+
+```
+
+We can also assess normality using a Shapiro-Wilk test. If p<0.05 then normality CANNOT be assumed.
+```{r}
+shapiro_test(residuals(model1)) #here, we have a normal (nearly) distribution
+```
+
+To assess normality by group we must use the pipe %>% again!Here, we see that we have normal dist for all 3 groups
+```{r}
+mtcars %>% 
+  group_by(cyl) %>%
+  shapiro_test(mpg) #from the rstatix package. Note: the base R version shapiro.test doesn't work here
+```
+
+To assess homogeneity of variance, we can use check_model to see it graphically. If we want to see numbers, we can use a levene test. A levene test p<0.05 indicates that there IS a significant difference in variances between the treatment groups. Compare this w/ our plots from check_model(). What do you think? 
+```{r}
+mtcars %>%
+  levene_test(mpg~cyl)
+```
+
+Technically, the levene test tells us we cannot do an ANOVA without doing a welch test (which accounts for the different variances). So, we can do the welch test one-way anova. 
+Looking at the data in our check_model, we can see pretty clearly that there is a difference in variance among out 3 cylinder groups. So that could be a problem. We can ignore this assumption due to high n (which is done often but isn't always best practice), or we could do a modified version of the ANOVA that accounts for this difference in variation. This is called a welch test. 
+
+
+
+
+
+
+## One-way Anova
+
+The simplest ANOVA is a one-way ANOVA, which is just an extension of a t-test. T-tests can only compare 2 means, but ANOVA can compare more than 2 groups. The simplest example of an ANOVA is when we have data organized by one grouping variable (hence, one-way). For example, if we want to know how mpg varies by cyl in mtcars, we would use a one-way anova. 
+NOTE: if variance differs signficantly between our groups, we want to run a welch_anova_test() instead of a one way anove (aov). welch_anova_test() is available in the rstatix package that we loaded above. 
+aov() is present in base R.
+
+So, let's plot the data and then do some stats!
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, group=cyl))+
+  geom_boxplot() #dots are outliers, we see 2 in the 8 cyl group. But do they really look like outliers???
+
+mtaov<-aov(mpg~cyl, data=mtcars) 
+mtaov #normally, an aov() will give us a p-value. Here it recognizes that "estimated effects may be unbalanced". We can find the p-value in summary()
+summary(mtaov) #this anova will still give us a p-value
+
+welch_anova_test(mpg~cyl, data=mtcars) #here, we do get a p-value that is <0.05, suggesting that there is an effect of cylinders onf mpg
+```
+
+**A second example**
+Let's apply those ANOVA skills to a new dataset. 
+We will use the iris data from the 'vegan' package. 
+
+First step: Let's plot some data! I want to assess the effect of species on petal.length
+
+```{r}
+head(iris)
+
+ggplot(data=iris, aes(x=Species, y=Petal.Length, group=Species))+
+  geom_boxplot(aes(fill=Species))+
+  theme_bw()+ #remember this?
+  scale_color_npg()+
+  scale_fill_npg()
+
+```
+</br>
+Our plot shows us that there is almost certinaly an effect of species on petal length. But, let's check that with an anova. 
+
+Second step: Check ANOVA assumptions. 
+
+Independence: We will assume this is fine. We can't possibly know for sure given the source of the data. 
+Outliers: We already checkd visually. Nothing stands out as an extreme outlier. But let's confirm
+```{r}
+iris %>% 
+  group_by(Species) %>%
+  identify_outliers(Petal.Length) #No extreme outliers, so let's carry on
+```
+
+Normality and Homoscedasticity 
+
+Visual Check
+Using check_model() we see that we have a normal distribution (yay) but there is some concern about homogeneity of variance. 
+```{r}
+modeliris<-aov(Petal.Length ~ Species, data=iris)
+check_model(modeliris)
+```
+
+Numbers check (shapiro for normality, levene for homosced)
+Normality is fine, but homoscedasticity assumption is not met, so we need a Welch test
+```{r}
+
+#entire model normality
+shapiro_test(residuals(modeliris)) #this comes out significant indicating non-normality in the residuals. This is clearly not the case when we look at all of the other data and figures we have, so let's not worry about it. 
+
+#normality of each group
+iris %>%
+  group_by(Species)%>%
+  shapiro_test(Petal.Length) # All come out as normal, note the almost significant p for setosa
+
+
+#Homogeneity of variance /Homoscedasticity 
+iris%>%
+  levene_test(Petal.Length~Species) #This is significant, so there is an issue with heterogeneity of variance and that assumption is not met. Thus, we need to do a 
+
+```
+
+
+Finally, let's run the anova (welch test)
+```{r}
+#regular anova
+aoviris<-aov(Petal.Length~Species, data=iris) 
+aoviris #this tells us we may have unbalanced effects
+summary(aoviris) #this summary still gives us a p value, so are we really doing something wrong??
+
+#welch anova
+welchiris<-welch_anova_test(Petal.Length~Species, data=iris) # We see a significant effect
+welchiris
+
+```
+
+
+## Two-way Anova
+The reason that ANOVA is so widely used is that it is very flexible. So far, we have learned how to assess whether one variable impacts another. But we can actually assess the impacts of several variables on each other. Here we will talk about a specific case, the two-way ANOVA
+
+Let's take a look at an example Two-Way ANOVA
+
+```{r}
+aov1<-aov(mpg~cyl*gear, data=mtcars) #maybe we are unbalanced, we can check assumptions after
+summary(aov1) #here we see a p-value and everything else we want for a stats table
+
+```
+
+Check model assumptions
+Here, we see that normality is fine, and that there may be some issues w/ variance, but it is probably fine. Multicollinearity is a new figure for us. I will explain it, but in short, it means that our two way anova is testing the effects of 2 variables (cyl and gear) that are correlated. 
+```{r}
+check_model(aov1)
+```
+
+What about outliers? 
+Let's do a visual and a numerical check
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, color=cyl))+
+  geom_boxplot()+
+  theme_bw()+
+  facet_wrap(~gear)
+
+
+
+mtcars %>% 
+  group_by(cyl, gear) %>%
+  identify_outliers(mpg) #No extreme outliers, so let's carry on
+```
+
+Let's revisit our ANOVA and interpret it!
+```{r}
+summary(aov1)
+```
+
+This shows us that there is a significant effect of cylinder on mpg. However, there is no effect of gear of of the interaction of cyl and gear (cyl:gear). This type of ANOVA is called an interactive two-way anova.
+
+When building an ANOVA (or any statistical model) there are two ways to look at multiple factors. We can do additive (+) or interactive (*). Additive tests the effects of each variable seperately. Interactive does the same plus an interaction term. 
+
+Let's look at the difference
+```{r}
+aov1<-aov(mpg~cyl*gear, data=mtcars)
+summary(aov1)
+
+aov2<-aov(mpg~cyl+gear, data=mtcars)
+summary(aov2)
+
+```
+
+We see that the p-values are slightly different here and that the additive anova does not include an interaction term. When do you think we might need additive vs. interactive? Does it really matter?
+The answer is really dependent upon your question! 
+
+You can use as many terms as you want in an anova, but the more you use the smaller the sample size will get and the harder it will be to interpret. We will talk about best practices in model building next week if we have time. 
+
+### For now, we have 1 more thing to learn! We have used ANOVA to determine that there is an effect of cyl on mpg. But, which groups within cylinders are different from each other?
+
+For that, we need post-hoc tests!
+
+
+## TUKEY Honestly Significant Difference test (HSD)
+
+First, let's look at our data. We saw from our ANOVA that there is a significant effect of cyl on mpg
+```{r}
+ggplot(data=mtcars, aes(x=cyl, y=mpg, fill=cyl))+
+  geom_boxplot()+
+  theme_bw()+
+  scale_color_npg()+
+  scale_fill_npg()
+
+aovtest<-aov(mpg~cyl, data=mtcars)
+summary(aovtest)
+```
+
+Great, we know about that effect. But which number of cylinders gives us the best mpg? It looks like 4 is the answer. But we still don't know! That is really what our hypothesis is most likely the be!
+
+To test that, we need to do a post-hoc test. I like the TUKEY honest significant difference test (which functions like a bnunch of t-tests all at once)
+
+Here is how we do it!
+```{r}
+aovtest<-aov(mpg~cyl, data=mtcars)
+TukeyHSD(aovtest)
+
+```
+
+### The Tukey shows us comparisons of each cylinder category with one another. We see that There are significant differences between all 3 groups! This tells us definitely, that MPG is highest with 4 cylinders and lowest with 8. 
+
+# **Assignment for Week 4** 
+To do this assignment, load in your favorite NON iris / mtcars data (check TidyTuesday, or elsewhere)
+
+1.) Read in your data and run a t-test on two columns. Make sure to test the assumptions!
+
+2.) Do a one-way ANOVA
+  a.) Generate a hypothesis about how 1 variable may impact another (don't be afraid to be wrong)
+  b.) Make a boxplot to look at the data 
+  c.) Run your ANOVA and TukeyHSD tests
+  d.) Check your assumptions (all 4). If there are major concerns with your ANOVA, include them here. 
+  e.) Intepret your data, was your hypothesis correct? 
+
+
+
+
+
